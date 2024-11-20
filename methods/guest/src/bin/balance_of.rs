@@ -39,6 +39,7 @@ sol! {
     struct Journal {
         Commitment commitment;
         address tokenAddress;
+        address userAddress;
         uint256 quantity;
     }
 }
@@ -66,6 +67,7 @@ fn main() {
         commitment: env.into_commitment(),
         tokenAddress: contract,
         quantity: returns._0,
+        userAddress: account,
     };
     env::commit_slice(&journal.abi_encode());
 }
