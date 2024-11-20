@@ -32,6 +32,7 @@ alloy::sol! {
     struct Journal {
         Commitment commitment;
         address tokenContract;
+        address userAddress;
         uint256 quantity;
     }
 }
@@ -150,13 +151,14 @@ async fn generate_proof_internal(
     log::info!("Journal details:");
     log::info!("Steel commitment: {:?}", journal.commitment);
     log::info!("  Token Contract: {:?}", journal.tokenContract);
+    log::info!("  User Address: {}", journal.userAddress);
     log::info!("  Quantity: {}", journal.quantity);
 
     // ABI encode the seal
     let _seal = encode_seal(&receipt).context("invalid receipt")?;
 
     Ok(ProofResponse {
-        receipt: serde_json::to_string_pretty(&receipt)?,
+        receipt: serde_json::to_string(&receipt)?,
     })
 }
 
