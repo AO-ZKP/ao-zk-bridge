@@ -1,40 +1,23 @@
-// Copyright 2024 RISC Zero, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// This application demonstrates how to send an off-chain proof request
-// to the Bonsai proving service and publish the received proofs directly
-// to your deployed app contract.
-
-use alloy::{
-    network::EthereumWallet,
-    providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
-    sol_types::{SolCall, SolValue},
-};
+use alloy::{providers::ProviderBuilder, sol_types::SolValue};
 use alloy_primitives::{Address, U256};
 use anyhow::{ensure, Context, Result};
+use axum::{
+    extract::{Path, State},
+    response::Json,
+    routing::get,
+    Router,
+};
 use clap::Parser;
-use erc20_counter_methods::{BALANCE_OF_ELF, BALANCE_OF_ID};
+use erc20_counter_methods::BALANCE_OF_ELF;
 use risc0_ethereum_contracts::encode_seal;
 use risc0_steel::{
     ethereum::{EthEvmEnv, ETH_SEPOLIA_CHAIN_SPEC},
     host::BlockNumberOrTag,
     Commitment, Contract,
 };
-use risc0_zkvm::{default_prover, sha::Digest, ExecutorEnv, ProverOpts, VerifierContext};
-use serde_json::to_string_pretty;
-use std::fs::write;
+use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
+use serde::Serialize;
+use std::{net::SocketAddr, str::FromStr, sync::Arc};
 use tokio::task;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -53,26 +36,13 @@ alloy::sol! {
     }
 }
 
-alloy::sol!(
-    #[sol(rpc, all_derives)]
-    "../contracts/src/ICounter.sol"
-);
-
-/// Simple program to create a proof to increment the Counter contract.
 #[derive(Parser)]
 struct Args {
-    /// Ethereum private key
-    #[clap(long, env)]
-    eth_wallet_private_key: PrivateKeySigner,
-
     /// Ethereum RPC endpoint URL
     #[clap(long, env)]
     eth_rpc_url: Url,
 
     /// Optional Beacon API endpoint URL
-    ///
-    /// When provided, Steel uses a beacon block commitment instead of the execution block. This
-    /// allows proofs to be validated using the EIP-4788 beacon roots contract.
     #[clap(long, env)]
     beacon_api_url: Option<Url>,
 
@@ -84,63 +54,87 @@ struct Args {
     #[clap(long)]
     token_contract: Address,
 
-    /// Address to query the token balance of
-    #[clap(long)]
-    account: Address,
+    /// Server port to listen on
+    #[clap(long, default_value = "3000")]
+    port: u16,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Initialize tracing. In order to view logs, run `RUST_LOG=info cargo run`
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
-    // Parse the command line arguments.
-    let args = Args::try_parse()?;
+#[derive(Clone)]
+struct AppState {
+    eth_rpc_url: Url,
+    beacon_api_url: Option<Url>,
+    counter_address: Address,
+    token_contract: Address,
+}
 
-    // Create an alloy provider for that private key and URL.
-    let wallet = EthereumWallet::from(args.eth_wallet_private_key);
+#[derive(Serialize)]
+struct ProofResponse {
+    receipt: String,
+    journal: Vec<u8>,
+    seal: Vec<u8>,
+}
+
+#[derive(Serialize)]
+struct ErrorResponse {
+    error: String,
+}
+
+async fn generate_proof(
+    State(state): State<Arc<AppState>>,
+    Path(wallet_address): Path<String>,
+) -> Json<Result<ProofResponse, ErrorResponse>> {
+    match generate_proof_internal(state, wallet_address).await {
+        Ok(response) => Json(Ok(response)),
+        Err(e) => Json(Err(ErrorResponse {
+            error: e.to_string(),
+        })),
+    }
+}
+
+async fn generate_proof_internal(
+    state: Arc<AppState>,
+    wallet_address: String,
+) -> Result<ProofResponse> {
+    let account = Address::from_str(&wallet_address).context("Invalid wallet address format")?;
+
+    // Create an alloy provider
     let provider = ProviderBuilder::new()
         .with_recommended_fillers()
-        .wallet(wallet)
-        .on_http(args.eth_rpc_url);
+        .on_http(state.eth_rpc_url.clone());
 
-    // Create an EVM environment from that provider for the block latest - 1.
+    // Create an EVM environment
     let mut env = EthEvmEnv::builder()
         .provider(provider.clone())
         .block_number_or_tag(BlockNumberOrTag::Parent)
         .build()
         .await?;
-    //  The `with_chain_spec` method is used to specify the chain configuration.
     env = env.with_chain_spec(&ETH_SEPOLIA_CHAIN_SPEC);
 
     // Prepare the function call
-    let call = IERC20::balanceOfCall {
-        account: args.account,
-    };
+    let call = IERC20::balanceOfCall { account };
 
-    // Preflight the call to prepare the input that is required to execute the function in
-    // the guest without RPC access. It also returns the result of the call.
-    let mut contract = Contract::preflight(args.token_contract, &mut env);
+    // Preflight the call
+    let mut contract = Contract::preflight(state.token_contract, &mut env);
     let returns = contract.call_builder(&call).call().await?._0;
-    assert!(returns >= U256::from(1));
+    ensure!(
+        returns >= U256::from(1),
+        "Account balance must be at least 1"
+    );
 
-    // Finally, construct the input from the environment.
-    // There are two options: Use EIP-4788 for verification by providing a Beacon API endpoint,
-    // or use the regular `blockhash' opcode.
-    let evm_input = if let Some(beacon_api_url) = args.beacon_api_url {
+    // Construct the input
+    let evm_input = if let Some(beacon_api_url) = &state.beacon_api_url {
         #[allow(deprecated)]
-        env.into_beacon_input(beacon_api_url).await?
+        env.into_beacon_input(beacon_api_url.clone()).await?
     } else {
         env.into_input().await?
     };
 
-    // Create the steel proof.
+    // Create the steel proof
     let prove_info = task::spawn_blocking(move || {
         let env = ExecutorEnv::builder()
             .write(&evm_input)?
-            .write(&args.token_contract)?
-            .write(&args.account)?
+            .write(&state.token_contract)?
+            .write(&account)?
             .write(&returns)?
             .build()
             .unwrap();
@@ -152,46 +146,54 @@ async fn main() -> Result<()> {
             &ProverOpts::groth16(),
         )
     })
-    .await?
-    .context("failed to create proof")?;
+    .await??;
+
     let receipt = prove_info.receipt;
-    let journal = &receipt.journal.bytes;
+    let journal = receipt.journal.bytes.clone();
 
-    // Decode and log the commitment
-    let journal = Journal::abi_decode(journal, true).context("invalid journal")?;
-    log::info!("Journal details:");
-    log::info!("Steel commitment: {:?}", journal.commitment);
-    log::info!("  Token Contract: {:?}", journal.tokenContract);
-    log::info!("  Quantity: {}", journal.quantity);
-    let json =
-        serde_json::to_string_pretty(&receipt).context("failed to serialize receipt to JSON")?;
-    std::fs::write("receipt.json", &json).context("failed to write receipt JSON")?;
-
-    // ABI encode the seal.
+    // ABI encode the seal
     let seal = encode_seal(&receipt).context("invalid receipt")?;
 
-    // Create an alloy instance of the Counter contract.
-    let contract = ICounter::new(args.counter_address, &provider);
+    Ok(ProofResponse {
+        receipt: serde_json::to_string_pretty(&receipt)?,
+        journal,
+        seal,
+    })
+}
 
-    // Call ICounter::imageID() to check that the contract has been deployed correctly.
-    let contract_image_id = Digest::from(contract.imageID().call().await?._0.0);
-    ensure!(contract_image_id == Digest::from(BALANCE_OF_ID));
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 
-    // Call the increment function of the contract and wait for confirmation.
-    log::info!(
-        "Sending Tx calling {} Function of {:#}...",
-        ICounter::incrementCall::SIGNATURE,
-        contract.address()
-    );
-    let call_builder = contract.increment(receipt.journal.bytes.into(), seal.into());
-    log::debug!("Send {} {}", contract.address(), call_builder.calldata());
-    let pending_tx = call_builder.send().await?;
-    let tx_hash = *pending_tx.tx_hash();
-    let receipt = pending_tx
-        .get_receipt()
-        .await
-        .with_context(|| format!("transaction did not confirm: {}", tx_hash))?;
-    ensure!(receipt.status(), "transaction failed: {}", tx_hash);
+    // Parse command line arguments
+    let args = Args::parse();
+
+    // Create the shared application state
+    let state = Arc::new(AppState {
+        eth_rpc_url: args.eth_rpc_url,
+        beacon_api_url: args.beacon_api_url,
+        counter_address: args.counter_address,
+        token_contract: args.token_contract,
+    });
+
+    // Build the router
+    let app = Router::new()
+        .route("/generate/:wallet_address", get(generate_proof))
+        .with_state(state);
+
+    // Create the server address
+    let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
+    println!("Server listening on {}", addr);
+
+    // Start the server
+    axum::serve(
+        tokio::net::TcpListener::bind(addr).await?,
+        app.into_make_service(),
+    )
+    .await?;
 
     Ok(())
 }

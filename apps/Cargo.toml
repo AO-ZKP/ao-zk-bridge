@@ -7,13 +7,18 @@ edition = { workspace = true }
 alloy = { workspace = true }
 alloy-primitives = { workspace = true }
 anyhow = { workspace = true }
+axum = "0.7"
 clap = { workspace = true, features = ["derive", "env"] }
 erc20-counter-methods = { workspace = true }
 log = { workspace = true }
 risc0-ethereum-contracts = { git = "https://github.com/risc0/risc0-ethereum", branch = "release-1.1" }
 risc0-steel = { git = "https://github.com/risc0/risc0-ethereum", branch = "release-1.1", features = ["host"] }
 risc0-zkvm = { workspace = true, features = ["client"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 tokio = { workspace = true }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["trace"] }
+tracing = "0.1"
 tracing-subscriber = { workspace = true }
 url = { workspace = true }
-serde_json = "1.0"
