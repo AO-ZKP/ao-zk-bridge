@@ -46,10 +46,6 @@ struct Args {
     #[clap(long, env)]
     beacon_api_url: Option<Url>,
 
-    /// Address of the Counter verifier contract
-    #[clap(long)]
-    counter_address: Address,
-
     /// Address of the ERC20 token contract
     #[clap(long)]
     token_contract: Address,
@@ -63,15 +59,12 @@ struct Args {
 struct AppState {
     eth_rpc_url: Url,
     beacon_api_url: Option<Url>,
-    counter_address: Address,
     token_contract: Address,
 }
 
 #[derive(Serialize)]
 struct ProofResponse {
     receipt: String,
-    journal: Vec<u8>,
-    seal: Vec<u8>,
 }
 
 #[derive(Serialize)]
@@ -149,15 +142,21 @@ async fn generate_proof_internal(
     .await??;
 
     let receipt = prove_info.receipt;
-    let journal = receipt.journal.bytes.clone();
+
+    let journal = &receipt.journal.bytes;
+
+    // Decode and log the commitment
+    let journal = Journal::abi_decode(journal, true).context("invalid journal")?;
+    log::info!("Journal details:");
+    log::info!("Steel commitment: {:?}", journal.commitment);
+    log::info!("  Token Contract: {:?}", journal.tokenContract);
+    log::info!("  Quantity: {}", journal.quantity);
 
     // ABI encode the seal
-    let seal = encode_seal(&receipt).context("invalid receipt")?;
+    let _seal = encode_seal(&receipt).context("invalid receipt")?;
 
     Ok(ProofResponse {
         receipt: serde_json::to_string_pretty(&receipt)?,
-        journal,
-        seal,
     })
 }
 
@@ -175,7 +174,6 @@ async fn main() -> Result<()> {
     let state = Arc::new(AppState {
         eth_rpc_url: args.eth_rpc_url,
         beacon_api_url: args.beacon_api_url,
-        counter_address: args.counter_address,
         token_contract: args.token_contract,
     });
 
