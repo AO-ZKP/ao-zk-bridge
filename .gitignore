@@ -23,5 +23,11 @@ target/
 .DS_Store
 .idea
 
+# Enviroment variables
 .env
+
+# Codebase compiler
 codebase.md
+
+# Submodules (ignored for codebase compiler)
+lib
