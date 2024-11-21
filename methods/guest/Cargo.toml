@@ -7,6 +7,10 @@ edition = "2021"
 name = "balance_of"
 path = "src/bin/balance_of.rs"
 
+[[bin]]
+name = "tx_info"
+path = "src/bin/tx_info.rs"
+
 [workspace]
 
 [dependencies]
