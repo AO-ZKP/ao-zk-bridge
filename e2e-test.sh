@@ -28,11 +28,8 @@ while [ $(cast rpc --rpc-url ${ETH_RPC_URL:?} eth_blockNumber | jq -re) == "$BLO
 # Publish a new state
 echo "Publishing a new state..."
 RUST_LOG=info cargo run --bin publisher -- \
-    --eth-wallet-private-key=${ETH_WALLET_PRIVATE_KEY:?} \
     --eth-rpc-url=${ETH_RPC_URL:?} \
-    --counter-address=${COUNTER_ADDRESS:?} \
     --token-contract=${TOYKEN_ADDRESS:?} \
-    --account=${TOKEN_OWNER:?}
 
 # Attempt to verify counter value as part of the script logic
 echo "Verifying state..."

@@ -42,8 +42,6 @@ contract Counter is ICounter {
     struct Journal {
         Steel.Commitment commitment;
         address tokenContract;
-        address userAddress;
-        uint256 quantity;
     }
 
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier and ERC-20 token address.
