@@ -19,7 +19,6 @@ contracts/src/Elf.sol
 target/
 *.lock
 
-lib
 # Misc
 .DS_Store
 .idea
