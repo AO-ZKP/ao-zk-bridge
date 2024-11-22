@@ -46,7 +46,7 @@ fn main() {
         .call();
 
     // Check that the given account holds at least 1 token.
-    assert!(result.amount >= U256::from(1));
+    assert!(result.amount > U256::from(0));
 
     // Create and commit journal with flattened fields
     let journal = Journal {
