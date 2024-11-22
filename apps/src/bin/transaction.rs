@@ -75,6 +75,20 @@ struct ErrorResponse {
     error: String,
 }
 
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    version: String,
+}
+
+async fn health_check() -> Json<HealthResponse> {
+    log::log!(log::Level::Info, "Health check");
+    Json(HealthResponse {
+        status: "healthy".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    })
+}
+
 async fn generate_transfer_proof(
     State(state): State<Arc<AppState>>,
     Path(wallet_address): Path<String>,
@@ -192,6 +206,7 @@ async fn main() -> Result<()> {
 
     // Build the router
     let app = Router::new()
+        .route("/", get(health_check))
         .route("/generate/:wallet_address", get(generate_transfer_proof))
         .with_state(state);
 
