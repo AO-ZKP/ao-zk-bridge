@@ -3,9 +3,6 @@ name = "erc20-counter-guests"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "balance_of"
-path = "src/bin/balance_of.rs"
 
 [[bin]]
 name = "tx_info"
