@@ -2,20 +2,20 @@
 pragma solidity ^0.8.20;
 
 contract ETHReceiver {
-    // State variables
     address public owner;
     
-    // Struct to store transfer details
+    // Struct to store transfer details with nullifier
     struct Transfer {
         uint256 amount;
         uint256 timestamp;
+        uint256 nullifier; // Added nullifier field
     }
     
     // Mapping from sender address to their latest transfer
     mapping(address => Transfer) public latestTransfers;
     
     // Events
-    event ETHReceived(address indexed sender, uint256 amount, uint256 timestamp);
+    event ETHReceived(address indexed sender, uint256 amount, uint256 timestamp, uint256 nullifier);
     event ETHWithdrawn(address indexed to, uint256 amount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     
@@ -31,22 +31,36 @@ contract ETHReceiver {
         emit OwnershipTransferred(address(0), msg.sender);
     }
     
-    // Fallback function to receive ETH
-    receive() external payable {
-        // Record the transfer
+    // Function to receive ETH with nullifier
+    function receiveWithNullifier(uint256 nullifier) external payable {
+        // Record the transfer with nullifier
         latestTransfers[msg.sender] = Transfer({
             amount: msg.value,
-            timestamp: block.timestamp
+            timestamp: block.timestamp,
+            nullifier: nullifier
         });
         
         // Emit event
-        emit ETHReceived(msg.sender, msg.value, block.timestamp);
+        emit ETHReceived(msg.sender, msg.value, block.timestamp, nullifier);
+    }
+    
+    // Fallback function to receive ETH
+    receive() external payable {
+        // Record the transfer with zero nullifier for backward compatibility
+        latestTransfers[msg.sender] = Transfer({
+            amount: msg.value,
+            timestamp: block.timestamp,
+            nullifier: 0
+        });
+        
+        // Emit event
+        emit ETHReceived(msg.sender, msg.value, block.timestamp, 0);
     }
     
     // Function to get latest transfer details
-    function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp) {
+    function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp, uint256 nullifier) {
         Transfer memory transfer = latestTransfers[sender];
-        return (transfer.amount, transfer.timestamp);
+        return (transfer.amount, transfer.timestamp, transfer.nullifier);
     }
     
     // Withdrawal functions

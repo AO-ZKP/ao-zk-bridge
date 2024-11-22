@@ -27,7 +27,7 @@ use url::Url;
 alloy::sol! {
     /// Interface to be called by the guest.
     interface IReceiver {
-        function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp);
+        function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp, uint256 nullifier);
     }
 
     /// Data committed to by the guest.
@@ -36,6 +36,7 @@ alloy::sol! {
         address from;
         uint256 amount;
         uint256 timestamp;
+        uint256 nullifier;
     }
 }
 
@@ -82,7 +83,7 @@ struct HealthResponse {
 }
 
 async fn health_check() -> Json<HealthResponse> {
-    log::log!(log::Level::Info, "Health check");
+    log::info!("Health check");
     Json(HealthResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -131,14 +132,20 @@ async fn generate_proof_internal(
     let mut contract = Contract::preflight(state.receiver_contract, &mut env);
     let returns = contract.call_builder(&call).call().await?;
     log::debug!(
-        "Transfer details - Amount: {}, Timestamp: {}",
+        "Transfer details - Amount: {}, Timestamp: {}, Nullifier: {}",
         returns.amount,
-        returns.timestamp
+        returns.timestamp,
+        returns.nullifier
     );
 
     ensure!(
         returns.amount > U256::ZERO,
         "No transfers found for this address"
+    );
+
+    ensure!(
+        returns.nullifier != U256::ZERO,
+        "Nullifier is zero, invalid transfer"
     );
 
     // Construct the input
@@ -168,7 +175,6 @@ async fn generate_proof_internal(
     .await??;
 
     let receipt = prove_info.receipt;
-
     let journal = &receipt.journal.bytes;
 
     // Decode and log the commitment
@@ -178,6 +184,7 @@ async fn generate_proof_internal(
     log::info!("From Address: {}", journal.from);
     log::info!("Amount: {}", journal.amount);
     log::info!("Timestamp: {}", journal.timestamp);
+    log::info!("Nullifier: {}", journal.nullifier);
 
     // ABI encode the seal
     let _seal = encode_seal(&receipt).context("invalid receipt")?;

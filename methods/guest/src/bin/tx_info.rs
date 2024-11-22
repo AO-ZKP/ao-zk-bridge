@@ -1,5 +1,3 @@
-// File: methods/guest/src/bin/native_transfer.rs
-
 #![no_main]
 
 use alloy_primitives::{Address, U256};
@@ -15,7 +13,7 @@ risc0_zkvm::guest::entry!(main);
 // Interface for our contract that receives ETH
 sol! {
     interface IReceiver {
-        function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp);
+        function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp, uint256 nullifier);
     }
 }
 
@@ -26,14 +24,15 @@ sol! {
         address from;           // Sender address
         uint256 amount;        // Amount in wei
         uint256 timestamp;     // Block timestamp
+        uint256 nullifier;     // Keep as uint256 but ensure proper encoding
     }
 }
 
 fn main() {
     // Read inputs from guest environment
     let input: EthEvmInput = env::read();
-    let contract_address: Address = env::read(); // The address we control/monitor
-    let sender: Address = env::read(); // The address that sent ETH
+    let contract_address: Address = env::read();
+    let sender: Address = env::read();
 
     // Convert input into EVM environment
     let env = input.into_env().with_chain_spec(&ETH_SEPOLIA_CHAIN_SPEC);
@@ -43,15 +42,17 @@ fn main() {
         .call_builder(&call)
         .call();
 
-    // Check that the given account holds at least 1 token.
+    // Check that the given account has made a transfer
     assert!(result.amount > U256::from(0));
+    assert!(result.nullifier != U256::from(0));
 
-    // Create and commit journal with flattened fields
+    // Create and commit journal
     let journal = Journal {
         commitment: env.into_commitment(),
         from: sender,
         amount: result.amount,
         timestamp: result.timestamp,
+        nullifier: result.nullifier,
     };
 
     env::commit_slice(&journal.abi_encode());
