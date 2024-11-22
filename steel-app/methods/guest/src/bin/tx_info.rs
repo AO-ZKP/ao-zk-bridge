@@ -41,9 +41,9 @@ fn main() {
     let result = Contract::new(contract_address, &env)
         .call_builder(&call)
         .call();
-
+    let min_amount: U256 = "500000000000".parse().unwrap();
     // Check that the given account has made a transfer
-    assert!(result.amount > U256::from(0));
+    assert!(result.amount >= min_amount);
     assert!(result.nullifier != U256::from(0));
 
     // Create and commit journal
@@ -57,3 +57,4 @@ fn main() {
 
     env::commit_slice(&journal.abi_encode());
 }
+

@@ -30,3 +30,4 @@ target/
 codebase.md
 
 # Submodules (ignored for codebase compiler)
+lib
