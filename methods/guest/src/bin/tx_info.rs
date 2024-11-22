@@ -33,14 +33,12 @@ fn main() {
     // Read inputs from guest environment
     let input: EthEvmInput = env::read();
     let contract_address: Address = env::read(); // The address we control/monitor
-    let sender_address: Address = env::read(); // The address that sent ETH
+    let sender: Address = env::read(); // The address that sent ETH
 
     // Convert input into EVM environment
     let env = input.into_env().with_chain_spec(&ETH_SEPOLIA_CHAIN_SPEC);
 
-    let call = IReceiver::getLatestTransferCall {
-        sender: sender_address,
-    };
+    let call = IReceiver::getLatestTransferCall { sender };
     let result = Contract::new(contract_address, &env)
         .call_builder(&call)
         .call();
@@ -51,7 +49,7 @@ fn main() {
     // Create and commit journal with flattened fields
     let journal = Journal {
         commitment: env.into_commitment(),
-        from: sender_address,
+        from: sender,
         amount: result.amount,
         timestamp: result.timestamp,
     };

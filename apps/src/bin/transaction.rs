@@ -1,0 +1,210 @@
+// File: apps/src/bin/transaction.rs
+
+use alloy::{providers::ProviderBuilder, sol_types::SolValue};
+use alloy_primitives::{Address, U256};
+use anyhow::{ensure, Context, Result};
+use axum::{
+    extract::{Path, State},
+    response::Json,
+    routing::get,
+    Router,
+};
+use clap::Parser;
+use erc20_counter_methods::TX_INFO_ELF;
+use risc0_ethereum_contracts::encode_seal;
+use risc0_steel::{
+    ethereum::{EthEvmEnv, ETH_SEPOLIA_CHAIN_SPEC},
+    host::BlockNumberOrTag,
+    Commitment, Contract,
+};
+use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
+use serde::Serialize;
+use std::{net::SocketAddr, str::FromStr, sync::Arc};
+use tokio::task;
+use tracing_subscriber::EnvFilter;
+use url::Url;
+
+alloy::sol! {
+    /// Interface to be called by the guest.
+    interface IReceiver {
+        function getLatestTransfer(address sender) external view returns (uint256 amount, uint256 timestamp);
+    }
+
+    /// Data committed to by the guest.
+    struct Journal {
+        Commitment commitment;
+        address from;
+        uint256 amount;
+        uint256 timestamp;
+    }
+}
+
+#[derive(Parser)]
+struct Args {
+    /// Ethereum RPC endpoint URL
+    #[clap(long, env)]
+    eth_rpc_url: Url,
+
+    /// Optional Beacon API endpoint URL
+    #[clap(long, env)]
+    beacon_api_url: Option<Url>,
+
+    /// Address of the receiver contract
+    #[clap(long)]
+    receiver_contract: Address,
+
+    /// Server port to listen on
+    #[clap(long, default_value = "3000")]
+    port: u16,
+}
+
+#[derive(Clone)]
+struct AppState {
+    eth_rpc_url: Url,
+    beacon_api_url: Option<Url>,
+    receiver_contract: Address,
+}
+
+#[derive(Serialize)]
+struct ProofResponse {
+    receipt: String,
+}
+
+#[derive(Serialize)]
+struct ErrorResponse {
+    error: String,
+}
+
+async fn generate_transfer_proof(
+    State(state): State<Arc<AppState>>,
+    Path(wallet_address): Path<String>,
+) -> Json<Result<ProofResponse, ErrorResponse>> {
+    match generate_proof_internal(state, wallet_address).await {
+        Ok(response) => Json(Ok(response)),
+        Err(e) => Json(Err(ErrorResponse {
+            error: e.to_string(),
+        })),
+    }
+}
+
+async fn generate_proof_internal(
+    state: Arc<AppState>,
+    wallet_address: String,
+) -> Result<ProofResponse> {
+    let sender = Address::from_str(&wallet_address).context("Invalid wallet address format")?;
+    log::debug!("Processing proof for sender: {}", sender);
+    // Create an alloy provider
+    let provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .on_http(state.eth_rpc_url.clone());
+
+    // Create an EVM environment
+    let mut env = EthEvmEnv::builder()
+        .provider(provider.clone())
+        .block_number_or_tag(BlockNumberOrTag::Parent)
+        .build()
+        .await?;
+    env = env.with_chain_spec(&ETH_SEPOLIA_CHAIN_SPEC);
+
+    // Prepare the function call for preflight
+    let call = IReceiver::getLatestTransferCall { sender };
+
+    log::debug!(
+        "Preflighting call for contract: {}",
+        state.receiver_contract
+    );
+    // Preflight the call
+    let mut contract = Contract::preflight(state.receiver_contract, &mut env);
+    let returns = contract.call_builder(&call).call().await?;
+    log::debug!(
+        "Transfer details - Amount: {}, Timestamp: {}",
+        returns.amount,
+        returns.timestamp
+    );
+
+    ensure!(
+        returns.amount > U256::ZERO,
+        "No transfers found for this address"
+    );
+
+    // Construct the input
+    let evm_input = if let Some(beacon_api_url) = &state.beacon_api_url {
+        #[allow(deprecated)]
+        env.into_beacon_input(beacon_api_url.clone()).await?
+    } else {
+        env.into_input().await?
+    };
+
+    // Create the steel proof
+    let prove_info = task::spawn_blocking(move || {
+        let env = ExecutorEnv::builder()
+            .write(&evm_input)?
+            .write(&state.receiver_contract)?
+            .write(&sender)?
+            .build()
+            .unwrap();
+
+        default_prover().prove_with_ctx(
+            env,
+            &VerifierContext::default(),
+            TX_INFO_ELF,
+            &ProverOpts::groth16(),
+        )
+    })
+    .await??;
+
+    let receipt = prove_info.receipt;
+
+    let journal = &receipt.journal.bytes;
+
+    // Decode and log the commitment
+    let journal = Journal::abi_decode(journal, true).context("invalid journal")?;
+    log::info!("Journal details:");
+    log::info!("Steel commitment: {:?}", journal.commitment);
+    log::info!("From Address: {}", journal.from);
+    log::info!("Amount: {}", journal.amount);
+    log::info!("Timestamp: {}", journal.timestamp);
+
+    // ABI encode the seal
+    let _seal = encode_seal(&receipt).context("invalid receipt")?;
+
+    Ok(ProofResponse {
+        receipt: serde_json::to_string(&receipt)?,
+    })
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
+    // Parse command line arguments
+    let args = Args::parse();
+
+    // Create the shared application state
+    let state = Arc::new(AppState {
+        eth_rpc_url: args.eth_rpc_url,
+        beacon_api_url: args.beacon_api_url,
+        receiver_contract: args.receiver_contract,
+    });
+
+    // Build the router
+    let app = Router::new()
+        .route("/generate/:wallet_address", get(generate_transfer_proof))
+        .with_state(state);
+
+    // Create the server address
+    let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
+    println!("Server listening on {}", addr);
+
+    // Start the server
+    axum::serve(
+        tokio::net::TcpListener::bind(addr).await?,
+        app.into_make_service(),
+    )
+    .await?;
+
+    Ok(())
+}
