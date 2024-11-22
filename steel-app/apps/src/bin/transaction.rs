@@ -137,10 +137,10 @@ async fn generate_proof_internal(
         returns.timestamp,
         returns.nullifier
     );
-
+    let min_amount: U256 = "500000000000".parse().unwrap();
     ensure!(
-        returns.amount > U256::ZERO,
-        "No transfers found for this address"
+        returns.amount >= min_amount,
+        "No sufficient transfers found for this address"
     );
 
     ensure!(
@@ -230,3 +230,4 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+
