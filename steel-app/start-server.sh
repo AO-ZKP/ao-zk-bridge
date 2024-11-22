@@ -9,7 +9,6 @@ source .env
 
 # Set up environment variable from the local broadcast directory
 export RECEIVER_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "ETHReceiver") | .contractAddress' broadcast/DeployReceiver.s.sol/${CHAIN_ID}/run-latest.json)
-export RUST_LOG=info
 
 # Start the server
 cargo run --bin transaction -- \
