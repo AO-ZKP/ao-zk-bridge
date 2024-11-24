@@ -174,3 +174,10 @@ dist
 # Finder (MacOS) folder config
 .DS_Store
 codebase.md
+
+*wallet.json
+*.wallet.json
+*allet.json
+.wallet.json
+wallet.json
+Wallet.json
