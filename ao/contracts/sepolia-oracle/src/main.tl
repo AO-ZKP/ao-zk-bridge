@@ -162,6 +162,7 @@ Handlers.add(
         blockHash = tostring(block.block_hash) as string
       }
       ao.send(sendResponse(msg.From, "Success", response))
+      return
     else
       local errorMsg = ""
       if query.blockNumber then
@@ -179,6 +180,7 @@ Handlers.add(
         blockHash = query.blockHash and errorMsg or ""
       }
       ao.send(sendResponse(msg.From, "Error", response))
+      return
     end
   end)
 )
