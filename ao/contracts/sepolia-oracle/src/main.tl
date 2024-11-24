@@ -173,7 +173,7 @@ Handlers.add(
       end
 
       local response: blockTypes.BlockError = {
-        network = "",
+        network = ChainId,
         blockNumber = query.blockNumber and errorMsg or "",
         timestamp = query.timestamp and errorMsg or "",
         blockHash = query.blockHash and errorMsg or ""
