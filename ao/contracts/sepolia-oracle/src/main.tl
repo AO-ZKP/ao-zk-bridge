@@ -3,7 +3,20 @@ require "globals"
 local json = require "json"
 local database = require "database"
 local dbUtils = require "dbUtils"
-local blockTypes = require "block_types"
+
+global record BlockData
+  network: string
+  blockNumber: string
+  timestamp: string
+  blockHash: string
+end
+
+global record BlockError
+  network: string
+  blockNumber: string
+  timestamp: string
+  blockHash: string
+end
 
 -- Type definitions
 global record ResponseData
@@ -43,7 +56,7 @@ local function wrapHandler(handlerFn: function(msg: Message)): function(msg: Mes
 end
 
 -- Validate block data
-local function validateBlockData(data: blockTypes.BlockData): boolean, string
+local function validateBlockData(data: BlockData): boolean, string
   -- Check network ID
   if data.network ~= ChainId then
     return false, "Invalid network ID"
@@ -73,7 +86,7 @@ Handlers.add(
         return
     end
 
-    local data = json.decode(msg.Data) as blockTypes.BlockData
+    local data = json.decode(msg.Data) as BlockData
     
     -- Validate input data
     local isValid, errMsg = validateBlockData(data)
@@ -155,7 +168,7 @@ Handlers.add(
     local block = dbUtils.queryOne(stmt)
     
     if block then
-      local response: blockTypes.BlockData = {
+      local response: BlockData = {
         network = tostring(block.network) as string,
         blockNumber = tostring(block.block_number) as string,
         timestamp = tostring(block.timestamp) as string,
@@ -173,7 +186,7 @@ Handlers.add(
         errorMsg = string.format("block by hash %s doesnt exist in db", query.blockHash)
       end
 
-      local response: blockTypes.BlockError = {
+      local response: BlockError = {
         network = ChainId,
         blockNumber = query.blockNumber and errorMsg or "",
         timestamp = query.timestamp and errorMsg or "",
