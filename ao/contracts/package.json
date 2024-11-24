@@ -4,7 +4,7 @@
   "scripts": {
     "sepolia-oracle:deploy": "cd ./sepolia-oracle && ./scripts/deploy.sh",
     "sepolia-oracle:test": "cd ./sepolia-oracle && ./scripts/test.sh",
-    "sepolia-oracle:build": "cd ./sepolia-oracle && ./scripts/build.sh",
+    "sepolia-oracle:build": "cd ./sepolia-oracle && ./scripts/build.sh"
   },
   "devDependencies": {
     "@types/bun": "latest",
