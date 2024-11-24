@@ -5,10 +5,6 @@
     "sepolia-oracle:deploy": "cd ./sepolia-oracle && ./scripts/deploy.sh",
     "sepolia-oracle:test": "cd ./sepolia-oracle && ./scripts/test.sh",
     "sepolia-oracle:build": "cd ./sepolia-oracle && ./scripts/build.sh",
-
-    "ao-bridge:deploy": "cd ./ao-bridge && ./scripts/deploy.sh",
-    "ao-bridge:test": "cd ./ao-bridge && ./scripts/test.sh",
-    "ao-bridge:build": "cd ./ao-bridge && ./scripts/build.sh"
   },
   "devDependencies": {
     "@types/bun": "latest",
