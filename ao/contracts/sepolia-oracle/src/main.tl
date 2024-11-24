@@ -67,6 +67,12 @@ Handlers.add(
   "updateState",
   Handlers.utils.hasMatchingTag("Action", "updateState"),
   wrapHandler(function(msg: Message): nil
+    
+    if msg.From ~= OracleAddress then
+        ao.send(sendResponse(msg.From, "Error", {message = "Unauthorized"}))
+        return
+    end
+
     local data = json.decode(msg.Data) as blockTypes.BlockData
     
     -- Validate input data
