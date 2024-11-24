@@ -68,7 +68,7 @@ Handlers.add(
   Handlers.utils.hasMatchingTag("Action", "updateState"),
   wrapHandler(function(msg: Message): nil
     
-    if msg.From ~= OracleAddress then
+    if not ((msg.From or msg.Sender) == OracleAddress) then
         ao.send(sendResponse(msg.From, "Error", {message = "Unauthorized"}))
         return
     end
