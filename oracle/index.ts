@@ -1,10 +1,26 @@
+import { readFileSync } from "node:fs";
+import { message, createDataItemSigner } from "@permaweb/aoconnect/node";
 import { createPublicClient, http } from "viem";
 import { sepolia, foundry } from "viem/chains";
 import "dotenv/config";
 
+// const { message } = connect(
+//   {
+//     MU_URL: "https://ao-mu-1.onrender.com",
+//     CU_URL: "https://cu.ao-testnet.xyz",
+//     GATEWAY_URL: "https://arweave.net",
+//   },
+// );
+
 // Environment configuration
 const ENV = process.env.NODE_ENV || "local";
 const ANVIL_PORT = process.env.ANVIL_PORT || "8545";
+
+
+
+const wallet = JSON.parse(
+  readFileSync("wallet.json").toString(),
+);
 
 // Initialize client based on environment
 const client = createPublicClient({
@@ -28,6 +44,17 @@ async function handleNewBlock(blockNumber: bigint) {
       blockHash: block.hash,
     };
     console.log("🧱 New block:", blockInfo);
+        // The only 2 mandatory parameters here are process and signer
+    const aoResult = await message({
+      process: "KGe3sfcPjITASSADmdetMjvC9peEYt_OlMFk1f8v08w",
+      // A signer function used to build the message "signature"
+      tags: [{ name: 'Action', value: 'updateState' } ],
+      signer: createDataItemSigner(wallet),
+      data: JSON.stringify(blockInfo),
+    });
+    // Log the result from ao
+    console.log("📡 AO result:", aoResult);
+
   } catch (error) {
     console.error("Error processing block:", error);
   }
