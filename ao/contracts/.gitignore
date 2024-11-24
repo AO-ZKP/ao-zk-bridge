@@ -4,3 +4,9 @@ build-lua
 build
 *.lock
 *.lockb
+*wallet.json
+*.wallet.json
+*allet.json
+.wallet.json
+wallet.json
+Wallet.json
