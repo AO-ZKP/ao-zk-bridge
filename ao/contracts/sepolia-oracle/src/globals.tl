@@ -8,5 +8,5 @@ global Configured: boolean
 
 
 global ChainId: string = "11155111"
-global OracleAddress: string = "pG8tOsUrlvxgHAH7FXBXn8chb8FW5ZXOVKRyVF1wr2o"
+global OracleAddress: string = "KGe3sfcPjITASSADmdetMjvC9peEYt_OlMFk1f8v08w"
 return {}
