@@ -33,8 +33,146 @@ local function wrapHandler(handlerFn)
    end
 end
 
-print ("ImageId: " .. ImageId)
 
+
+local function validateBlockData(data)
+
+   if data.network ~= ChainId then
+      return false, "Invalid network ID"
+   end
+
+
+   if not string.match(data.blockHash, "^0x%x+$") or #data.blockHash ~= 66 then
+      return false, "Invalid block hash format"
+   end
+
+
+   if not tonumber(data.blockNumber) or not tonumber(data.timestamp) then
+      return false, "Invalid block number or timestamp format"
+   end
+
+   return true, ""
+end
+
+
+Handlers.add(
+"updateState",
+Handlers.utils.hasMatchingTag("Action", "updateState"),
+wrapHandler(function(msg)
+
+   if not ((msg.From or msg.Sender) == OracleAddress) then
+      ao.send(sendResponse(msg.From, "Error", { message = "Unauthorized" }))
+      return
+   end
+
+   local data = json.decode(msg.Data)
+
+
+   local isValid, errMsg = validateBlockData(data)
+   if not isValid then
+      ao.send(sendResponse(msg.From, "Error", { message = errMsg }))
+      return
+   end
+
+
+   local checkStmt = DB:prepare("SELECT block_number, timestamp FROM Blocks WHERE block_number = ? OR block_hash = ?")
+   checkStmt:bind_names({ block_number = data.blockNumber, block_hash = data.blockHash })
+   local existing = dbUtils.queryOne(checkStmt)
+
+   if existing then
+      ao.send(sendResponse(msg.From, "Error", { message = "Block already exists" }))
+      return
+   end
+
+
+   local latestStmt = DB:prepare("SELECT block_number, timestamp FROM Blocks ORDER BY CAST(block_number as INTEGER) DESC LIMIT 1")
+   local latest = dbUtils.queryOne(latestStmt)
+
+   if latest and (tonumber(data.blockNumber) <= tonumber(latest.block_number) or
+      tonumber(data.timestamp) <= tonumber(latest.timestamp)) then
+      ao.send(sendResponse(msg.From, "Error", { message = "Invalid block sequence" }))
+      return
+   end
+
+
+   local insertStmt = DB:prepare([[
+      INSERT INTO Blocks ( block_number, timestamp, block_hash)
+      VALUES (:block_number, :timestamp, :block_hash)
+    ]])
+
+   insertStmt:bind_names({
+      block_number = data.blockNumber,
+      timestamp = data.timestamp,
+      block_hash = data.blockHash,
+   })
+
+   local success, err = dbUtils.execute(insertStmt, "Insert block")
+   if not success then
+      ao.send(sendResponse(msg.From, "Error", { message = "Failed to insert block: " .. err }))
+      return
+   end
+
+
+   print(data)
+
+   ao.send(sendResponse(msg.From, "Success", { message = "Block added successfully" }))
+end))
+
+
+
+local function getBlock(msg)
+   local query = json.decode(msg)
+   local stmt
+   local whereClause
+   local params = {}
+
+   if query.blockNumber then
+      whereClause = "block_number = :block_number"
+      params.block_number = query.blockNumber
+   elseif query.timestamp then
+      whereClause = "timestamp = :timestamp"
+      params.timestamp = query.timestamp
+   elseif query.blockHash then
+      whereClause = "block_hash = :block_hash"
+      params.block_hash = query.blockHash
+   else
+      ao.send(sendResponse(msg.From, "Error", { message = "No valid search criteria provided" }))
+      return
+   end
+
+   stmt = DB:prepare("SELECT * FROM Blocks WHERE " .. whereClause)
+   stmt:bind_names(params)
+
+   local block = dbUtils.queryOne(stmt)
+
+   if block then
+      local response = {
+         blockNumber = tostring(block.block_number),
+         timestamp = tostring(block.timestamp),
+         blockHash = tostring(block.block_hash),
+      }
+      ao.send(sendResponse(msg.From, "Success", response))
+      return
+   else
+      local errorMsg = ""
+      if query.blockNumber then
+         errorMsg = string.format("block by %s doesnt exist in db", query.blockNumber)
+      elseif query.timestamp then
+         errorMsg = string.format("block by timestamp %s doesnt exist in db", query.timestamp)
+      else
+         errorMsg = string.format("block by hash %s doesnt exist in db", query.blockHash)
+      end
+
+      local response = {
+         blockNumber = query.blockNumber and errorMsg or "",
+         timestamp = query.timestamp and errorMsg or "",
+         blockHash = query.blockHash and errorMsg or "",
+      }
+      ao.send(sendResponse(msg.From, "Error", response))
+      return
+   end
+
+end
 
 Handlers.add(
 "bridge",
@@ -70,10 +208,10 @@ wrapHandler(function(msg)
    checkStmt:bind_names({ nullifier = nullifier })
    local existing = dbUtils.queryOne(checkStmt)
 
-   -- if existing then
-   --    ao.send(sendResponse(msg.From, "Error", { message = "Transaction already Bridged" }))
-   --    return
-   -- end
+   if existing then
+      ao.send(sendResponse(msg.From, "Error", { message = "Transaction already Bridged" }))
+      return
+   end
 
    print("Transaction does not exist")
    print(existing)
@@ -90,22 +228,13 @@ wrapHandler(function(msg)
 
    local verifierResult = json.decode(verifierResult)
    local block = {
-      created_at = 0,
-      amount = verifierResult.amount,
-      withdraw_address = input.withdraw,
       timestamp = verifierResult.timestamp,
-      nullifier = nullifier,
-      block_number = verifierResult.blocknumber,
-      block_hash = verifierResult.blockhash,
+      blockNumber = verifierResult.blocknumber,
+      blockHash = verifierResult.blockhash,
 
    }
 
-   local getBlockJson = ao.send({
-      Target = OracleContract,
-      Action = "getBlock",
-      Data = json.encode({ blockNumber = verifierResult.blocknumber }),
-   }).receive().Data
-
+   local getBlockJson = getBlock(block)
 
    local block = json.decode(getBlockJson) 
    

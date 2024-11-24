@@ -42,7 +42,13 @@ function database.initializeDatabase()
    if not Configured then
       print("Setting up database schema")
       local tables = {
-
+         [[
+        CREATE TABLE IF NOT EXISTS Blocks (
+          block_number TEXT PRIMARY KEY,
+          timestamp TEXT NOT NULL,
+          block_hash TEXT NOT NULL
+        );
+      ]],
 
 
          [[
@@ -52,8 +58,7 @@ function database.initializeDatabase()
           amount TEXT NOT NULL,
           timestamp TEXT NOT NULL,
           withdraw_address TEXT NOT NULL,
-          block_hash TEXT NOT NULL,
-          created_at INTEGER DEFAULT (strftime('%s', 'now'))
+          block_hash TEXT NOT NULL
         );
       ]],
       }
