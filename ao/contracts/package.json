@@ -1,0 +1,21 @@
+{
+  "name": "satoshis-tower",
+  "type": "module",
+  "scripts": {
+    "sepolia-oracle:deploy": "cd ./sepolia-oracle && ./scripts/deploy.sh",
+    "sepolia-oracle:test": "cd ./sepolia-oracle && ./scripts/test.sh",
+    "sepolia-oracle:build": "cd ./sepolia-oracle && ./scripts/build.sh"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "aoform": "latest",
+    "yaml": "^2.4.5"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "*"
+  ]
+}
