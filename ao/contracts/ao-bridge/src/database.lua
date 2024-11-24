@@ -46,10 +46,12 @@ function database.initializeDatabase()
 
 
          [[
-        CREATE TABLE IF NOT EXISTS Blocks (
+        CREATE TABLE IF NOT EXISTS Transactions (
+          nullifier TEXT PRIMARY KEY,
           block_number TEXT PRIMARY KEY,
-          network TEXT NOT NULL,
+          amount TEXT NOT NULL,
           timestamp TEXT NOT NULL,
+          withdraw_address TEXT NOT NULL,
           block_hash TEXT NOT NULL,
           created_at INTEGER DEFAULT (strftime('%s', 'now'))
         );
