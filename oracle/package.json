@@ -9,6 +9,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@permaweb/aoconnect": "^0.0.62",
     "dotenv": "^16.4.5",
     "viem": "^2.21.49"
   }
