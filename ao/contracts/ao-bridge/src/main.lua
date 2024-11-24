@@ -1,29 +1,7 @@
-local _tl_compat; if (tonumber((_VERSION or ''):match('[%d.]*$')) or 0) < 5.3 then local p, m = pcall(require, 'compat53.module'); if p then _tl_compat = m end end; local debug = _tl_compat and _tl_compat.debug or debug; local string = _tl_compat and _tl_compat.string or string; local xpcall = _tl_compat and _tl_compat.xpcall or xpcall
 require("globals")
 local json = require("json")
 local database = require("database")
 local dbUtils = require("dbUtils")
-
-BlockData = {}
-
-
-
-
-
-
-BlockError = {}
-
-
-
-
-
-
-
-ResponseData = {}
-
-
-
-
 
 
 database.initializeDatabase()
@@ -56,24 +34,6 @@ local function wrapHandler(handlerFn)
 end
 
 
-local function validateBlockData(data)
-
-   if data.network ~= ChainId then
-      return false, "Invalid network ID"
-   end
-
-
-   if not string.match(data.blockHash, "^0x%x+$") or #data.blockHash ~= 66 then
-      return false, "Invalid block hash format"
-   end
-
-
-   if not tonumber(data.blockNumber) or not tonumber(data.timestamp) then
-      return false, "Invalid block number or timestamp format"
-   end
-
-   return true, ""
-end
 
 
 Handlers.add(
@@ -135,66 +95,6 @@ wrapHandler(function(msg)
    end
 
    ao.send(sendResponse(msg.From, "Success", { message = "Block added successfully" }))
-end))
-
-
-
-Handlers.add(
-"getBlock",
-Handlers.utils.hasMatchingTag("Action", "getBlock"),
-wrapHandler(function(msg)
-   local query = json.decode(msg.Data)
-   local stmt
-   local whereClause
-   local params = {}
-
-   if query.blockNumber then
-      whereClause = "block_number = :block_number"
-      params.block_number = query.blockNumber
-   elseif query.timestamp then
-      whereClause = "timestamp = :timestamp"
-      params.timestamp = query.timestamp
-   elseif query.blockHash then
-      whereClause = "block_hash = :block_hash"
-      params.block_hash = query.blockHash
-   else
-      ao.send(sendResponse(msg.From, "Error", { message = "No valid search criteria provided" }))
-      return
-   end
-
-   stmt = DB:prepare("SELECT * FROM Blocks WHERE " .. whereClause)
-   stmt:bind_names(params)
-
-   local block = dbUtils.queryOne(stmt)
-
-   if block then
-      local response = {
-         network = tostring(block.network),
-         blockNumber = tostring(block.block_number),
-         timestamp = tostring(block.timestamp),
-         blockHash = tostring(block.block_hash),
-      }
-      ao.send(sendResponse(msg.From, "Success", response))
-      return
-   else
-      local errorMsg = ""
-      if query.blockNumber then
-         errorMsg = string.format("block by %s doesnt exist in db", query.blockNumber)
-      elseif query.timestamp then
-         errorMsg = string.format("block by timestamp %s doesnt exist in db", query.timestamp)
-      else
-         errorMsg = string.format("block by hash %s doesnt exist in db", query.blockHash)
-      end
-
-      local response = {
-         network = ChainId,
-         blockNumber = query.blockNumber and errorMsg or "",
-         timestamp = query.timestamp and errorMsg or "",
-         blockHash = query.blockHash and errorMsg or "",
-      }
-      ao.send(sendResponse(msg.From, "Error", response))
-      return
-   end
 end))
 
 
