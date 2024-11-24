@@ -41,8 +41,8 @@ function watchBlocks() {
   }
 
   return client.watchBlocks({
-    onBlock: (block) => {
-      void handleNewBlock(block.number);
+    onBlock: async (block) => {
+      void await handleNewBlock(block.number);
     },
     onError: (error) =>
       console.error(`${client.chain.name} watch error:`, error),
