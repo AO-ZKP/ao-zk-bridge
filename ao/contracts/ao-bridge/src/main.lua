@@ -33,68 +33,101 @@ local function wrapHandler(handlerFn)
    end
 end
 
-
+print ("ImageId: " .. ImageId)
 
 
 Handlers.add(
-"updateState",
-Handlers.utils.hasMatchingTag("Action", "updateState"),
+"bridge",
+Handlers.utils.hasMatchingTag("Action", "Bridge"),
 wrapHandler(function(msg)
 
-   if not ((msg.From or msg.Sender) == OracleAddress) then
-      ao.send(sendResponse(msg.From, "Error", { message = "Unauthorized" }))
-      return
-   end
-
    local data = json.decode(msg.Data)
-
-
-   local isValid, errMsg = validateBlockData(data)
-   if not isValid then
-      ao.send(sendResponse(msg.From, "Error", { message = errMsg }))
+   if not (data.receipt or data.withdraw) then
+      ao.send(sendResponse(msg.From, "Error", { message = "Invalid request" }))
       return
    end
 
+   -- input is a json which equals = {receipt, withdraw, ImageId}
+   local input ={receipt = data.receipt, withdraw = data.withdraw, imageid = ImageId}
 
-   local checkStmt = DB:prepare("SELECT block_number, timestamp FROM Blocks WHERE block_number = ? OR block_hash = ?")
-   checkStmt:bind_names({ block_number = data.blockNumber, block_hash = data.blockHash })
+   --turn input table to json string
+   local inputJson = json.encode(input)
+
+   print(inputJson)
+   local keccakResult = require("_groth16").keccak(inputJson)
+   print ("Keccak result: " .. keccakResult)
+   if keccakResult.error then
+      ao.send(sendResponse(msg.From, "Error", { message = keccakResult.error }))
+      return
+   end
+
+   local nullifier = json.decode(keccakResult).hash
+
+   print("Nullifier: " .. tostring(nullifier))
+   print("Checking if transaction exists")
+   -- check if an entry with the nullifier EXISTS
+   local checkStmt = DB:prepare("SELECT * FROM Transactions WHERE nullifier = :nullifier")
+   checkStmt:bind_names({ nullifier = nullifier })
    local existing = dbUtils.queryOne(checkStmt)
 
    if existing then
-      ao.send(sendResponse(msg.From, "Error", { message = "Block already exists" }))
+      ao.send(sendResponse(msg.From, "Error", { message = "Transaction already Bridged" }))
       return
    end
 
+   print("Transaction does not exist")
+   print(existing)
+   -- verify the proof
 
-   local latestStmt = DB:prepare("SELECT block_number, timestamp FROM Blocks ORDER BY CAST(block_number as INTEGER) DESC LIMIT 1")
-   local latest = dbUtils.queryOne(latestStmt)
-
-   if latest and (tonumber(data.blockNumber) <= tonumber(latest.block_number) or
-      tonumber(data.timestamp) <= tonumber(latest.timestamp)) then
-      ao.send(sendResponse(msg.From, "Error", { message = "Invalid block sequence" }))
+   local verifierResult = require("_groth16").verify(inputJson)
+   print("Verifier result: " .. verifierResult) 
+   if verifierResult.error then
+      ao.send(sendResponse(msg.From, "Error", { message = verifierResult.error }))
       return
    end
 
+   print("Proof verified successfully")
 
+   local verifierResult = json.decode(verifierResult)
+
+
+   local final = {
+      nullifier = nullifier,
+      block_number = verifierResult.blocknumber,
+      amount = verifierResult.amount,
+      timestamp = verifierResult.timestamp,
+      withdraw_address = input.withdraw,
+      block_hash = verifierResult.blockhash,
+      }
+
+   print(final)
+   
    local insertStmt = DB:prepare([[
-      INSERT INTO Blocks (network, block_number, timestamp, block_hash)
-      VALUES (:network, :block_number, :timestamp, :block_hash)
+      INSERT INTO Transactions (nullifier, block_number, amount, timestamp, withdraw_address, block_hash)
+      VALUES (:nullifier, :block_number, :amount, :timestamp, :withdraw_address, :block_hash)
     ]])
 
    insertStmt:bind_names({
-      network = data.network,
-      block_number = data.blockNumber,
-      timestamp = data.timestamp,
-      block_hash = data.blockHash,
+
+      nullifier = nullifier,
+      block_number = verifierResult.blocknumber,
+      amount = verifierResult.amount,
+      timestamp = verifierResult.timestamp,
+      withdraw_address = input.withdraw,
+      block_hash = verifierResult.blockhash,
+   
    })
 
    local success, err = dbUtils.execute(insertStmt, "Insert block")
    if not success then
-      ao.send(sendResponse(msg.From, "Error", { message = "Failed to insert block: " .. err }))
+      ao.send(sendResponse(msg.From, "Error", { message = "Failed to Add Transaction: " .. err }))
       return
    end
 
-   ao.send(sendResponse(msg.From, "Success", { message = "Block added successfully" }))
+   print("Block added successfully")
+   print(final)
+
+   ao.send(sendResponse(msg.From, "Success", { message = "Transaction added successfully" }))
 end))
 
 
