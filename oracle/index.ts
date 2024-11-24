@@ -22,7 +22,7 @@ async function handleNewBlock(blockNumber: bigint) {
       blockNumber,
     });
     const blockInfo = {
-      network: client.chain.name,
+      network: client.chain.id,
       blockNumber: Number(block.number).toString(),
       timestamp: block.timestamp.toString(),
       blockHash: block.hash,
