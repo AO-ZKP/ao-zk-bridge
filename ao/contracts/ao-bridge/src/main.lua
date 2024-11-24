@@ -70,10 +70,10 @@ wrapHandler(function(msg)
    checkStmt:bind_names({ nullifier = nullifier })
    local existing = dbUtils.queryOne(checkStmt)
 
-   if existing then
-      ao.send(sendResponse(msg.From, "Error", { message = "Transaction already Bridged" }))
-      return
-   end
+   -- if existing then
+   --    ao.send(sendResponse(msg.From, "Error", { message = "Transaction already Bridged" }))
+   --    return
+   -- end
 
    print("Transaction does not exist")
    print(existing)
@@ -89,7 +89,32 @@ wrapHandler(function(msg)
    print("Proof verified successfully")
 
    local verifierResult = json.decode(verifierResult)
+   local block = {
+      created_at = 0,
+      amount = verifierResult.amount,
+      withdraw_address = input.withdraw,
+      timestamp = verifierResult.timestamp,
+      nullifier = nullifier,
+      block_number = verifierResult.blocknumber,
+      block_hash = verifierResult.blockhash,
 
+   }
+
+   local getBlockJson = ao.send({
+      Target = OracleContract,
+      Action = "getBlock",
+      Data = json.encode({ blockNumber = verifierResult.blocknumber }),
+   }).receive().Data
+
+
+   local block = json.decode(getBlockJson) 
+   
+   if block.blockNumber ~= verifierResult.blocknumber then
+      ao.send(sendResponse(msg.From, "Error", { message = "Block not found" }))
+      return
+   end
+    
+   
 
    local final = {
       nullifier = nullifier,
@@ -100,23 +125,13 @@ wrapHandler(function(msg)
       block_hash = verifierResult.blockhash,
       }
 
-   print(final)
    
    local insertStmt = DB:prepare([[
       INSERT INTO Transactions (nullifier, block_number, amount, timestamp, withdraw_address, block_hash)
       VALUES (:nullifier, :block_number, :amount, :timestamp, :withdraw_address, :block_hash)
     ]])
 
-   insertStmt:bind_names({
-
-      nullifier = nullifier,
-      block_number = verifierResult.blocknumber,
-      amount = verifierResult.amount,
-      timestamp = verifierResult.timestamp,
-      withdraw_address = input.withdraw,
-      block_hash = verifierResult.blockhash,
-   
-   })
+   insertStmt:bind_names(final)
 
    local success, err = dbUtils.execute(insertStmt, "Insert block")
    if not success then
