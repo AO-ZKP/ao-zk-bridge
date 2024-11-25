@@ -136,8 +136,7 @@ local function getBlock(msg)
       whereClause = "block_hash = :block_hash"
       params.block_hash = query.blockHash
    else
-      ao.send(sendResponse(msg.From, "Error", { message = "No valid search criteria provided" }))
-      return
+      return "No valid search criteria provided"
    end
 
    stmt = DB:prepare("SELECT * FROM Blocks WHERE " .. whereClause)
@@ -151,8 +150,8 @@ local function getBlock(msg)
          timestamp = tostring(block.timestamp),
          blockHash = tostring(block.block_hash),
       }
-      ao.send(sendResponse(msg.From, "Success", response))
-      return
+
+      return response
    else
       local errorMsg = ""
       if query.blockNumber then
@@ -168,8 +167,7 @@ local function getBlock(msg)
          timestamp = query.timestamp and errorMsg or "",
          blockHash = query.blockHash and errorMsg or "",
       }
-      ao.send(sendResponse(msg.From, "Error", response))
-      return
+      return response
    end
 
 end
@@ -231,12 +229,17 @@ wrapHandler(function(msg)
       blockNumber = verifierResult.blocknumber,
    }
 
-   local getBlockJson = getBlock(block)
+   print("Block number: " .. block.blockNumber)
+   local getBlockJson = getBlock(json.encode(block))
 
-   local block = json.decode(getBlockJson) 
+   print("Block json: ") 
+   print(getBlockJson)
+   local block = json.encode(getBlockJson) 
    
-   if block.blockNumber ~= verifierResult.blocknumber then
+   print("Block Table: " .. block)
+   if getBlockJson.blockNumber ~= verifierResult.blocknumber then
       ao.send(sendResponse(msg.From, "Error", { message = "Block not found" }))
+      print("Block not found" .. block.blockNumber .. " verifier" .. verifierResult.blocknumber)
       return
    end
     
@@ -262,6 +265,7 @@ wrapHandler(function(msg)
    local success, err = dbUtils.execute(insertStmt, "Insert block")
    if not success then
       ao.send(sendResponse(msg.From, "Error", { message = "Failed to Add Transaction: " .. err }))
+      print("Failed to add transaction")
       return
    end
 
@@ -270,6 +274,7 @@ wrapHandler(function(msg)
 
    ao.send(sendResponse(msg.From, "Success", { message = "Transaction added successfully" }))
    Send({ Target = Token, Action = "Mint", Recipient = msg.Recipient, Quantity = tostring(verifierResult.amount)} )
+   return
 end))
 
 
