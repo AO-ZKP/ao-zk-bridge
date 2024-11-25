@@ -139,8 +139,16 @@ function App() {
         if (!parsedProof.withdraw || !parsedProof.receipt) {
           throw new Error("Invalid proof data")
         }
-        submissionData = parsedProof
-        console.log("Parsed proof data:", submissionData)
+        const receiptJson = JSON.parse(parsedProof.receipt);
+
+        // Create new object with parsed receipt
+        const fixedJson = {
+            ...parsedProof,
+            receipt: receiptJson
+        };
+        submissionData = fixedJson
+        console.log("Proof data:", fixedJson)
+        console.log("Parsed proof data:", JSON.stringify(fixedJson))
       } else if (proofToSubmit && proofToSubmit.Ok && proofToSubmit.Ok.receipt) {
         // If it's an object with the expected structure
         submissionData = {
