@@ -315,10 +315,10 @@ function App() {
               Thank you for using our A0 ZK Bridge service!
             </p>
             <p className="mb-4">
-              Join our <a href="https://discord.gg/zaGHZgtyyw" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">Discord server</a> and follow us on <a href="https://x.com/a0labs" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">Twitter</a>.
+              Join our <a href="https://discord.gg/zaGHZgtyyw" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">[Discord server]</a> and follow us on <a href="https://x.com/a0labs" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Twitter @a0labs</a>.
             </p>
             <p className="mb-4">
-              Feel free to reach out to me on <a href="https://x.com/quantaindew" target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">Twitter</a> or Discord (username: quantaindew).
+              Feel free to reach out to me on <a href="https://x.com/quantaindew" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline"> @quantaindew on Twitter</a> or Discord (@quantaindew).
             </p>
             <div className="space-y-4">
               <Button 
