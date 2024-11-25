@@ -55,7 +55,7 @@ local utils = {
 Variant = "0.0.3"
 
 -- token should be idempotent and not change previous state updates
-Denomination = Denomination or 12
+Denomination = Denomination or 18
 Balances = Balances or { [ao.id] = utils.toBalanceValue(10000 * 10 ^ Denomination) }
 TotalSupply = TotalSupply or utils.toBalanceValue(10000 * 10 ^ Denomination)
 Name = Name or 'Wrapped ETH Sepolia'
@@ -182,6 +182,7 @@ end)
    ]]
 --
 Handlers.add('mint', "Mint", function(msg)
+  assert(type(msg.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
   assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
 
@@ -194,6 +195,8 @@ Handlers.add('mint', "Mint", function(msg)
     msg.reply({
       Data = Colors.gray .. "Successfully minted " .. Colors.blue .. msg.Quantity .. Colors.reset
     })
+
+    Send({ Target = ao.id, Action = "Transfer", Recipient = msg.Recipient, Quantity = msg.Quantity} )
   else
     msg.reply({
       Action = 'Mint-Error',
