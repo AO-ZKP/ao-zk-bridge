@@ -237,7 +237,7 @@ wrapHandler(function(msg)
    local block = json.encode(getBlockJson) 
    
    print("Block Table: " .. block)
-   if getBlockJson.blockNumber ~= verifierResult.blocknumber then
+   if (getBlockJson.blockNumber ~= verifierResult.blocknumber) and (getBlockJson.blockHash ~= verifierResult.blockhash) then
       ao.send(sendResponse(msg.From, "Error", { message = "Block not found" }))
       print("Block not found" .. block.blockNumber .. " verifier" .. verifierResult.blocknumber)
       return
