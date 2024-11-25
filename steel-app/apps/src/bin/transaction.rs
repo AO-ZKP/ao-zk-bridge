@@ -48,10 +48,6 @@ struct Args {
     #[clap(long, env)]
     eth_rpc_url: Url,
 
-    /// Optional Beacon API endpoint URL
-    #[clap(long, env)]
-    beacon_api_url: Option<Url>,
-
     /// Address of the receiver contract
     #[clap(long)]
     receiver_contract: Address,
@@ -64,7 +60,6 @@ struct Args {
 #[derive(Clone)]
 struct AppState {
     eth_rpc_url: Url,
-    beacon_api_url: Option<Url>,
     receiver_contract: Address,
 }
 
@@ -151,12 +146,8 @@ async fn generate_proof_internal(
     );
 
     // Construct the input
-    let evm_input = if let Some(beacon_api_url) = &state.beacon_api_url {
-        #[allow(deprecated)]
-        env.into_beacon_input(beacon_api_url.clone()).await?
-    } else {
-        env.into_input().await?
-    };
+    let evm_input = env.into_input().await?;
+    
 
     // Create the steel proof
     let prove_info = task::spawn_blocking(move || {
@@ -209,7 +200,6 @@ async fn main() -> Result<()> {
     // Create the shared application state
     let state = Arc::new(AppState {
         eth_rpc_url: args.eth_rpc_url,
-        beacon_api_url: args.beacon_api_url,
         receiver_contract: args.receiver_contract,
     });
 
