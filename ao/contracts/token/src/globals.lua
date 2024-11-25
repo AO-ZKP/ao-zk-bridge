@@ -1,5 +1,5 @@
 
 ChainId = "11155111"
-OracleContract = "tMVoYp4cIA_yibxZYy-7gqSbeNPpdeQPRD3TZrE4B1U"
+OracleContract = "SX5bFl_MIcu9CjIe7Rd6jbpLXWiS_eXuMvTgjYh1H3Q"
 
 return {}

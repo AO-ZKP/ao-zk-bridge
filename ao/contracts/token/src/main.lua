@@ -1,3 +1,4 @@
+require("globals")
 local bint = require('.bint')(256)
 --[[
   This module implements the ao Standard Token Specification.
