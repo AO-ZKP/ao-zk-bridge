@@ -228,10 +228,7 @@ wrapHandler(function(msg)
 
    local verifierResult = json.decode(verifierResult)
    local block = {
-      timestamp = verifierResult.timestamp,
       blockNumber = verifierResult.blocknumber,
-      blockHash = verifierResult.blockhash,
-
    }
 
    local getBlockJson = getBlock(block)
@@ -272,6 +269,7 @@ wrapHandler(function(msg)
    print(final)
 
    ao.send(sendResponse(msg.From, "Success", { message = "Transaction added successfully" }))
+   Send({ Target = Token, Action = "Mint", Recipient = msg.Recipient, Quantity = tostring(verifierResult.amount)} )
 end))
 
 
