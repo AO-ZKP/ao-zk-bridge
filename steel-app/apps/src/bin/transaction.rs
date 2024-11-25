@@ -9,6 +9,7 @@ use axum::{
     routing::get,
     Router,
 };
+use http::{HeaderValue, Method};
 use clap::Parser;
 use erc20_counter_methods::TX_INFO_ELF;
 use risc0_ethereum_contracts::encode_seal;
@@ -21,6 +22,7 @@ use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
 use serde::Serialize;
 use std::{net::SocketAddr, str::FromStr, sync::Arc};
 use tokio::task;
+use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -211,11 +213,21 @@ async fn main() -> Result<()> {
         receiver_contract: args.receiver_contract,
     });
 
+    // Configure CORS
+    let cors = CorsLayer::new()
+        .allow_origin(vec![
+            "http://localhost:5173".parse::<HeaderValue>().unwrap(),
+            "https://bridge_a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
+        ])
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers(Any);    
+
     // Build the router
     let app = Router::new()
         .route("/", get(health_check))
         .route("/generate/:wallet_address", get(generate_transfer_proof))
-        .with_state(state);
+        .with_state(state)
+        .layer(cors);
 
     // Create the server address
     let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
