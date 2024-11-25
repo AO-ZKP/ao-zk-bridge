@@ -272,8 +272,7 @@ wrapHandler(function(msg)
    print("Block added successfully")
    print(final)
 
-   ao.send(sendResponse(msg.From, "Success", { message = "Transaction added successfully" }))
-   Send({ Target = Token, Action = "Mint", Recipient = msg.Recipient, Quantity = tostring(verifierResult.amount)} )
+   Send({ Target = Token, Action = "Mint", Recipient = input.withdraw, Quantity = tostring(verifierResult.amount)} )
    return
 end))
 
