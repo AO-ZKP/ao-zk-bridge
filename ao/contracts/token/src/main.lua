@@ -58,9 +58,9 @@ Variant = "0.0.3"
 Denomination = Denomination or 12
 Balances = Balances or { [ao.id] = utils.toBalanceValue(10000 * 10 ^ Denomination) }
 TotalSupply = TotalSupply or utils.toBalanceValue(10000 * 10 ^ Denomination)
-Name = Name or 'Points Coin'
-Ticker = Ticker or 'PNTS'
-Logo = Logo or 'SBCCXwwecBlDqRLUjb8dYABExTJXLieawf7m2aBJ-KY'
+Name = Name or 'Wrapped ETH Sepolia'
+Ticker = Ticker or 'wETHS'
+Logo = Logo or 'tV92WZxgU2GoLj8YeDeWEH6vCogz7ARdR05UoOmbntQ'
 
 --[[
      Add handlers for each incoming Action defined by the ao Standard Token Specification
