@@ -228,11 +228,11 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag("Action","Mint"), function(ms
   if type(msg.Recipient) ~= 'string' then
     return
   end
-  msg.Quantity = tostring(bint.floor(bint(msg.Quantity)/6000000))
+  msg.Quantity = tostring(bint.floor(bint(msg.Quantity)/1000000))
   print('Minting ' .. tostring(msg.Quantity) .. ' tokens')
 
   assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
-  
+
   if not Balances[msg.From] then Balances[msg.From] = "0" end
   if not Balances[ao.id] then Balances[ao.id] = "0" end
   if not Balances[msg.Quantity] then Balances[msg.Quantity] = "0" end
