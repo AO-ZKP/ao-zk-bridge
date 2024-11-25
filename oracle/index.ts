@@ -46,7 +46,7 @@ async function handleNewBlock(blockNumber: bigint) {
     console.log("🧱 New block:", blockInfo);
         // The only 2 mandatory parameters here are process and signer
     const aoResult = await message({
-      process: "tMVoYp4cIA_yibxZYy-7gqSbeNPpdeQPRD3TZrE4B1U",
+      process: "SX5bFl_MIcu9CjIe7Rd6jbpLXWiS_eXuMvTgjYh1H3Q",
       // A signer function used to build the message "signature"
       tags: [{ name: 'Action', value: 'updateState' } ],
       signer: createDataItemSigner(wallet),
