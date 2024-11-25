@@ -55,7 +55,7 @@ local utils = {
 Variant = "0.0.3"
 
 -- token should be idempotent and not change previous state updates
-Denomination = Denomination or 18
+Denomination = Denomination or 12
 Balances = Balances or { [ao.id] = utils.toBalanceValue(10000 * 10 ^ Denomination) }
 TotalSupply = TotalSupply or utils.toBalanceValue(10000 * 10 ^ Denomination)
 Name = Name or 'Wrapped ETH Sepolia'
@@ -184,19 +184,21 @@ end)
 Handlers.add('mint', "Mint", function(msg)
   assert(type(msg.Recipient) == 'string', 'Recipient is required!')
   assert(type(msg.Quantity) == 'string', 'Quantity is required!')
-  assert(bint(0) < bint(msg.Quantity), 'Quantity must be greater than zero!')
+  -- wei to winston conversion
+  local quantity = tostring(bint.floor(bint(quantity)/6000000))
+  assert(bint(0) < bint(quantity), 'Quantity must be greater than zero!')
 
   if not Balances[ao.id] then Balances[ao.id] = "0" end
 
   if msg.From == (ao.id or OracleContract) then
     -- Add tokens to the token pool, according to Quantity
-    Balances[msg.From] = utils.add(Balances[msg.From], msg.Quantity)
-    TotalSupply = utils.add(TotalSupply, msg.Quantity)
+    Balances[msg.From] = utils.add(Balances[msg.From], quantity)
+    TotalSupply = utils.add(TotalSupply, quantity)
     msg.reply({
-      Data = Colors.gray .. "Successfully minted " .. Colors.blue .. msg.Quantity .. Colors.reset
+      Data = Colors.gray .. "Successfully minted " .. Colors.blue .. quantity .. Colors.reset
     })
 
-    Send({ Target = ao.id, Action = "Transfer", Recipient = msg.Recipient, Quantity = msg.Quantity} )
+    Send({ Target = ao.id, Action = "Transfer", Recipient = msg.Recipient, Quantity = quantity} )
   else
     msg.reply({
       Action = 'Mint-Error',
