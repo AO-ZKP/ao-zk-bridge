@@ -2,7 +2,7 @@
 
 source .env
 
-forge script --rpc-url http://localhost:8545 \
+forge script --rpc-url $ETH_RPC_URL \
     --private-key $ETH_WALLET_PRIVATE_KEY \
     --broadcast \
     DeployReceiver
