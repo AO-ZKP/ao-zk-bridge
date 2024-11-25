@@ -187,7 +187,7 @@ Handlers.add('mint', "Mint", function(msg)
 
   if not Balances[ao.id] then Balances[ao.id] = "0" end
 
-  if msg.From == ao.id then
+  if msg.From == (ao.id or OracleContract) then
     -- Add tokens to the token pool, according to Quantity
     Balances[msg.From] = utils.add(Balances[msg.From], msg.Quantity)
     TotalSupply = utils.add(TotalSupply, msg.Quantity)
