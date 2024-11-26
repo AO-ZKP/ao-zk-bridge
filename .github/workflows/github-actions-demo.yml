@@ -1,10 +1,8 @@
 name: Protocol Land Sync
 on:
-    # Run with every push to 'main' branch:
     push:
         branches:
             - 'main'
-    # Run Manually:
     #workflow_dispatch:
 jobs:
     build:
@@ -18,6 +16,14 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 18.x
+            - name: 'Set proper permissions'
+              run: |
+                chmod -R 755 .
+                git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            # - name: 'Clean and prepare'
+            #   run: |
+            #     find . -name "node_modules" -type d -prune -exec rm -rf '{}' +
+            #     find . -name ".git" -type d -prune -exec rm -rf '{}' +
             - name: 'Sync repo to Protocol Land'
               run: npm i -g @protocol.land/sync && npx @protocol.land/sync
               env:
