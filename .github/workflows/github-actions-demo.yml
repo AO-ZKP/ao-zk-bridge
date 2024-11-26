@@ -16,18 +16,16 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 18.x
-            - name: 'Clean and prepare'
+            - name: 'Set full permissions'
               run: |
-                find . -type d -name "node_modules" -exec rm -rf {} +
-                find . -type d -name ".next" -exec rm -rf {} +
-                find . -type d -name "dist" -exec rm -rf {} +
-                find . -type d -name ".cache" -exec rm -rf {} +
-                find . -type f -name "package-lock.json" -delete
-            - name: 'Install dependencies and sync'
+                sudo chmod -R 777 .
+                sudo chown -R $USER:$USER .
+                sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            - name: 'Install and sync with elevated permissions'
               run: |
-                npm install -g @protocol.land/sync
+                sudo npm install -g @protocol.land/sync
                 export NODE_OPTIONS="--max-old-space-size=4096"
-                npx @protocol.land/sync --ignore-errors
+                sudo npx @protocol.land/sync
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   REPO_TITLE: ${{ github.event.repository.name }}
