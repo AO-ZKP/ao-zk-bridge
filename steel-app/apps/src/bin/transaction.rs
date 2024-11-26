@@ -209,6 +209,8 @@ async fn main() -> Result<()> {
             "http://localhost:5173".parse::<HeaderValue>().unwrap(),
             "https://bridge_a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
             "https://a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
+            "https://a0labs_arlink.ar-io.dev".parse::<HeaderValue>().unwrap(),
+              
         ])
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers(Any);    
