@@ -210,7 +210,7 @@ async fn main() -> Result<()> {
             "https://bridge_a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
             "https://a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
             "https://a0labs_arlink.ar-io.dev".parse::<HeaderValue>().unwrap(),
-              
+            "https://ao-zk-bridge_arlink.ar-io.dev".parse::<HeaderValue>().unwrap(), 
         ])
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers(Any);    
