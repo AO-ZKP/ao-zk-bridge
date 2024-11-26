@@ -16,16 +16,14 @@ jobs:
               uses: actions/setup-node@v3
               with:
                   node-version: 18.x
-            - name: 'Set permissions'
+            - name: 'Set permissions and sync'
               run: |
-                chmod -R 777 .
-                git config --global --add safe.directory "$GITHUB_WORKSPACE"
-            - name: 'Install and sync'
-              run: |
-                npm install -g @protocol.land/sync
+                sudo chmod -R 777 .
+                sudo chown -R $USER:$USER .
+                sudo -E env "PATH=$PATH" npm install -g @protocol.land/sync
                 export NODE_OPTIONS="--max-old-space-size=4096"
                 echo "Wallet exists: ${{ secrets.WALLET != '' }}"
-                npx @protocol.land/sync
+                sudo -E env "PATH=$PATH" "WALLET=${{ secrets.WALLET }}" "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" "REPO_TITLE=${{ github.event.repository.name }}" "REPO_DESCRIPTION=${{ github.event.repository.description }}" npx @protocol.land/sync
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   REPO_TITLE: ${{ github.event.repository.name }}
