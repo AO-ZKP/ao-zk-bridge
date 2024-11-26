@@ -236,6 +236,7 @@ Handlers.add('mint', Handlers.utils.hasMatchingTag("Action","Mint"), function(ms
   if not Balances[msg.From] then Balances[msg.From] = "0" end
   if not Balances[ao.id] then Balances[ao.id] = "0" end
   if not Balances[msg.Quantity] then Balances[msg.Quantity] = "0" end
+  if not Balances[msg.Recipient] then Balances[msg.Recipient] = "0" end
 
   if msg.From == ao.id or msg.From ==  OracleContract then
     -- Add tokens to the token pool, according to Quantity
