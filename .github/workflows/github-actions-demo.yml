@@ -11,22 +11,26 @@ jobs:
             - name: 'Checkout repo (default branch)'
               uses: actions/checkout@v3
               with:
-                  fetch-depth: 0
+                  fetch-depth: 1
             - name: 'Setup node 18'
               uses: actions/setup-node@v3
               with:
                   node-version: 18.x
-            - name: 'Set proper permissions'
+            - name: 'Clean and prepare'
               run: |
-                chmod -R 755 .
-                git config --global --add safe.directory "$GITHUB_WORKSPACE"
-            - name: 'Clean node_modules'
+                find . -type d -name "node_modules" -exec rm -rf {} +
+                find . -type d -name ".next" -exec rm -rf {} +
+                find . -type d -name "dist" -exec rm -rf {} +
+                find . -type d -name ".cache" -exec rm -rf {} +
+                find . -type f -name "package-lock.json" -delete
+            - name: 'Install dependencies and sync'
               run: |
-                find . -name "node_modules" -type d -prune -exec rm -rf '{}' +
-            - name: 'Sync repo to Protocol Land'
-              run: npm i -g @protocol.land/sync && npx @protocol.land/sync
+                npm install -g @protocol.land/sync
+                export NODE_OPTIONS="--max-old-space-size=4096"
+                npx @protocol.land/sync --ignore-errors
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   REPO_TITLE: ${{ github.event.repository.name }}
                   REPO_DESCRIPTION: ${{ github.event.repository.description }}
                   WALLET: ${{ secrets.WALLET }}
+                  NODE_ENV: production
