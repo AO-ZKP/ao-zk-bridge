@@ -208,6 +208,7 @@ async fn main() -> Result<()> {
         .allow_origin(vec![
             "http://localhost:5173".parse::<HeaderValue>().unwrap(),
             "https://bridge_a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
+            "https://a0labs.arweave.net".parse::<HeaderValue>().unwrap(),
         ])
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers(Any);    
