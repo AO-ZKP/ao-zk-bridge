@@ -18,7 +18,7 @@ use risc0_steel::{
     host::BlockNumberOrTag,
     Commitment, Contract,
 };
-use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext};
+use risc0_zkvm::{default_prover, ExecutorEnv, ProverOpts, VerifierContext, Receipt};
 use serde::Serialize;
 use std::{net::SocketAddr, str::FromStr, sync::Arc};
 use tokio::task;
@@ -65,7 +65,7 @@ struct AppState {
 
 #[derive(Serialize)]
 struct ProofResponse {
-    receipt: String,
+    receipt: Receipt,
 }
 
 #[derive(Serialize)]
@@ -183,7 +183,7 @@ async fn generate_proof_internal(
     let _seal = encode_seal(&receipt).context("invalid receipt")?;
 
     Ok(ProofResponse {
-        receipt: serde_json::to_string(&receipt)?,
+        receipt: receipt,
     })
 }
 
