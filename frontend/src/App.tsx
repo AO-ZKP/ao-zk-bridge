@@ -139,8 +139,10 @@ function App() {
         if (!parsedProof.withdraw || !parsedProof.receipt) {
           throw new Error("Invalid proof data")
         }
-        const receiptJson = JSON.parse(parsedProof.receipt);
-
+        
+        // only convert receipt to json if it's not already in json format using conditional
+        const receiptJson = typeof parsedProof.receipt === 'string' ? JSON.parse(parsedProof.receipt) : parsedProof.receipt;
+        
         // Create new object with parsed receipt
         const fixedJson = {
             ...parsedProof,
