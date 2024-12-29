@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { message, createDataItemSigner } from "@permaweb/aoconnect/node";
 import { createPublicClient, http } from "viem";
-import { sepolia, foundry } from "viem/chains";
+import { sepolia, foundry, neonDevnet } from "viem/chains";
 import "dotenv/config";
 
 // const { message } = connect(
@@ -24,10 +24,10 @@ const wallet = JSON.parse(
 
 // Initialize client based on environment
 const client = createPublicClient({
-  chain: ENV === "test" ? sepolia : foundry,
+  chain: ENV === "test" ? neonDevnet : foundry,
   transport:
     ENV === "test"
-      ? http(process.env.SEPOLIA_RPC_URL)
+      ? http(process.env.NEONDEV_RPC_URL)
       : http(`http://127.0.0.1:${ANVIL_PORT}`),
 });
 
@@ -44,7 +44,9 @@ async function handleNewBlock(blockNumber: bigint) {
       blockHash: block.hash,
     };
     console.log("🧱 New block:", blockInfo);
-        // The only 2 mandatory parameters here are process and signer
+    
+    // The only 2 mandatory parameters here are process and signer
+
     const aoResult = await message({
       process: "SX5bFl_MIcu9CjIe7Rd6jbpLXWiS_eXuMvTgjYh1H3Q",
       // A signer function used to build the message "signature"
@@ -52,6 +54,7 @@ async function handleNewBlock(blockNumber: bigint) {
       signer: createDataItemSigner(wallet),
       data: JSON.stringify(blockInfo),
     });
+    
     // Log the result from ao
     console.log("📡 AO result:", aoResult);
 
