@@ -353,7 +353,42 @@ function App() {
 
   return (
     <main className="min-h-screen bg-black text-green-400 font-mono flex flex-col items-center justify-center p-4">
+ <h2 className="text-green-400 text-lg md:text-xl font-bold mb-4">
+        ETH Sepolia ➔ AO Testnet Demo is Down
+        </h2>
+        <h2 className="text-green-400 text-lg md:text-xl font-bold mb-4">
+        Under going Metamorphosis
+        </h2>
+
+
+<h2 className="text-green-400 text-lg md:text-xl font-bold mb-4">
+  
+<a 
+  href="https://discord.gg/zaGHZgtyyw" 
+  target="_blank"
+  rel="noopener noreferrer"
+  className="hover:underline text-blue-400"
+>
+discord.gg/zaGHZgtyyw
+</a>
+</h2>
+
+
+        <h2 className="text-blue-400 text-lg md:text-xl font-bold mb-4">
+         {''}
+        <a 
+          href="https://x.com/a0labs" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline "
+        >
+        x.com/a0labs
+        </a>
+        </h2>
+
+
       <header className="text-4xl mb-8">
+
         <AsciiArt art="a0" />
       </header>
       

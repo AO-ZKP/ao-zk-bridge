@@ -17,11 +17,11 @@ interface AsciiArtProps {
                           
   `,
       bunny: `
-        /\\_/\\
-       ((@v@))
-       ():::()
-        VV-VV
-      ZK Bridge
+
+{\\__/}
+( • . •)
+/ >♥️
+    ZK Bridge
   `
     };
   
