@@ -396,7 +396,7 @@ discord.gg/zaGHZgtyyw
       
       <footer className="mt-16 text-sm">
         <p>&copy;
-2023 A0 ZK Bridge. All rights reserved.</p>
+2025 A0 ZK Bridge. All rights reserved.</p>
       </footer>
     </main>
   )
