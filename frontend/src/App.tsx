@@ -213,7 +213,6 @@ function App() {
             <h1 className="text-2xl md:text-4xl mb-4">Welcome to A0 ZK Bridge</h1>
             
             <p className="mb-8 max-w-md">
-              Hop into the future of secure, private cross-chain transactions with our zero-knowledge bridge. It's fast, it's fuzzy, it's fantastic!
             </p>
             
             <div className="space-y-4">

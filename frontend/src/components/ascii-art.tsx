@@ -17,7 +17,7 @@ interface AsciiArtProps {
                           
   `,
       bunny: `
-fi
+      
 {\\__/}
 ( • . •)
 / >♥️
